@@ -13,7 +13,9 @@ const port = 3000;
 // Store API key here - Replace 'your-api-key' with your actual OpenAI API keyd
 const OPENAI_API_KEY = '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';
 
-app.use(cors());
+app.use(cors({
+    origin: '*'
+}));
 app.use(express.json());
 app.use(express.static('public'));
 
