@@ -8,14 +8,9 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
-const port = 3000;
+const port = process.env.PORT || 3000;
 
-// Store API key here - Replace 'your-api-key' with your actual OpenAI API keyd
-const OPENAI_API_KEY = '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';
-
-app.use(cors({
-    origin: '*'
-}));
+app.use(cors());
 app.use(express.json());
 app.use(express.static('public'));
 
@@ -23,11 +18,18 @@ app.post('/generate-image', async (req, res) => {
     try {
         const { prompt } = req.body;
         
+        if (!process.env.OPENAI_API_KEY) {
+            console.error('OpenAI API key is not set');
+            return res.status(500).json({ error: 'OpenAI API key is not configured' });
+        }
+
+        console.log('Sending request to OpenAI with prompt:', prompt);
+        
         const response = await fetch('https://api.openai.com/v1/images/generations', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${OPENAI_API_KEY}`
+                'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`
             },
             body: JSON.stringify({
                 model: "dall-e-3",
@@ -37,14 +39,32 @@ app.post('/generate-image', async (req, res) => {
             })
         });
 
+        if (!response.ok) {
+            const errorData = await response.json();
+            console.error('OpenAI API error:', errorData);
+            return res.status(response.status).json({
+                error: errorData.error?.message || 'Error generating image'
+            });
+        }
+
         const data = await response.json();
+        console.log('Successfully received response from OpenAI');
         res.json(data);
     } catch (error) {
-        console.error('Error:', error);
-        res.status(500).json({ error: error.message });
+        console.error('Server error:', error);
+        res.status(500).json({
+            error: 'Internal server error',
+            details: error.message
+        });
     }
 });
 
+// Add a test endpoint
+app.get('/test', (req, res) => {
+    res.json({ status: 'Server is running' });
+});
+
 app.listen(port, () => {
-    console.log(`Server running at http://localhost:${port}`);
+    console.log(`Server running on port ${port}`);
+    console.log('OpenAI API Key present:', !!process.env.OPENAI_API_KEY);
 });
